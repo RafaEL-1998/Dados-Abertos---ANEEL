@@ -132,7 +132,7 @@ duracao_interrupcoes = df['Duracao_categoria'].value_counts().reindex(labels)
 # === 9. Gráfico de barras — causas mais frequentes === #
 plt.figure(figsize=(10,6))
 duracao_interrupcoes.plot(kind='bar', color='steelblue')
-plt.title('Distribuição das interrupções por duração')
+plt.title(f'Distribuição das interrupções por duração em {df['NumAno'].iloc[0]}')
 plt.xlabel('Duração da Interrupção')
 plt.ylabel('Quantidade de Ocorrências')
 plt.xticks(rotation=45, ha='right')
