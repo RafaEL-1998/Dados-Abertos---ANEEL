@@ -1,0 +1,148 @@
+from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import date
+import os
+from docx2pdf import convert
+from lxml.html.defs import list_tags
+
+# === CONFIGURAÇÕES === #
+MUNICIPIO = "Tacuru"
+DATA_RELATORIO = date.today().strftime("%d/%m/%Y")
+ANO_RELATORIO = date.today().strftime("%Y")
+NUM_RELATORIO = "011"
+
+# Caminhos
+MODELO = "modelo_agems_demanda.docx"
+SAIDA_DOCX = f"saida/relatorio_{MUNICIPIO.lower()}.docx"
+SAIDA_PDF = f"saida/relatorio_{MUNICIPIO.lower()}.pdf"
+
+os.makedirs("saida", exist_ok=True)
+os.makedirs("figuras", exist_ok=True)
+
+# === ABRE O MODELO BASE === #
+doc = Document(MODELO)
+
+# === 1. TÍTULO === #
+titulo = doc.add_paragraph(f"Relatório de Análise n° {NUM_RELATORIO}/{ANO_RELATORIO}-CATENE/AGEMS")
+titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+run = titulo.runs[0]
+run.bold = True
+run.font.name = "Arial Narrow"
+run.font.size = Pt(14)
+
+# === 2. ASSUNTO === #
+solicitante = "1ª Promotoria de Justiça da Comarca de Iguatemi, Ministério Público de Mato Grosso do Sul"
+num_oficio = "0489/2025/PJ/IGU"
+data_oficio = "14 de outubro de 2025"
+noticia_fato = "01.2025.00011392-0"
+concessionaria = "Energisa Mato Grosso do Sul – EMS"
+
+assunto = (
+        f""" \n\n\nAssunto: Atendimento à Demanda da {solicitante}, relativa ao Ofício n° {num_oficio}, que faz referência 
+à Notícia de Fato n° {noticia_fato}.\n\n\n
+        """
+)
+
+a = doc.add_paragraph(assunto)
+a.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+a.paragraph_format.left_indent = Pt(200)
+
+# === 3. SUMÁRIO AUTOMÁTICO === #
+def add_table_of_contents():
+    p = doc.add_paragraph("SUMÁRIO\n")
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.runs[0]
+    run.font.size = Pt(14)
+    run.bold = True
+    fldSimple = OxmlElement('w:fldSimple')
+    fldSimple.set(qn('w:instr'), 'TOC \\o "1-3" \\h \\z \\u')
+    run = OxmlElement('w:r')
+    fldSimple.append(run)
+    p._p.append(fldSimple)
+
+add_table_of_contents()
+doc.add_page_break()
+
+# === 4. DO OBJETIVO === #
+titulo1 = doc.add_paragraph("DO OBJETIVO")
+titulo1.style = "Heading 1"
+objetivo = (
+        f""" Subsidiar a Diretoria de Regulação e Fiscalização – Gás Canalizado, Energia e Mineração da AGEMS "
+            na resposta ao Ofício n° {num_oficio}, de {data_oficio}, da {solicitante}, referente à solicitação "
+            para que a Agência verifique possíveis irregularidades e deficiências no fornecimento de energia elétrica "
+            por parte da empresa {concessionaria}, no município de {MUNICIPIO}.
+        """
+)
+doc.add_paragraph(objetivo)
+
+# === 5. DOS FATOS === #
+titulo2 = doc.add_paragraph("DOS FATOS")
+titulo2.style = "Heading 1"
+doc.add_paragraph(
+    f"Solicitação da Promotoria para análise acerca de frequentes quedas de energia elétrica no município de {MUNICIPIO}, "
+    "visando instruir a Notícia de Fato mencionada, em consonância com o Ofício n° 165/2025 da Câmara Municipal de Tacuru. "
+    "A análise foi elaborada pela Câmara Técnica de Energia e Mineração da AGEMS a partir de informações da ANEEL e da EMS."
+)
+
+# === 6. DA ANÁLISE === #
+titulo3 = doc.add_paragraph("DA ANÁLISE")
+titulo3.style = "Heading 1"
+
+titulo3_1 = doc.add_paragraph(f"Atendimento de Energia Elétrica ao Município de {MUNICIPIO}")
+titulo3_1.style = "Heading 2"
+
+# === GERA E INSERE GRÁFICO === #
+df = pd.DataFrame({
+    "Causa": ["Vento", "Descarga Atmosférica", "Falha de Equipamento", "Vegetação"],
+    "Quantidade": [1290, 1134, 734, 300]
+})
+plt.figure()
+plt.bar(df["Causa"], df["Quantidade"])
+plt.title("Causas de Interrupções - 2022 a 2025")
+plt.xticks(rotation=15)
+plt.tight_layout()
+figura1_path = "figuras/figura1.png"
+plt.savefig(figura1_path)
+plt.close()
+
+doc.add_picture(figura1_path, width=Inches(5.5))
+
+# === 7. ANÁLISES === #
+total = df["Quantidade"].sum()
+analise_interrupcoes = (
+    f"As interrupções não programadas em {MUNICIPIO} totalizaram {total} ocorrências entre 2022 e 2025. "
+    f"As principais causas foram {df.iloc[0]['Causa']} ({df.iloc[0]['Quantidade']} casos) e "
+    f"{df.iloc[1]['Causa']} ({df.iloc[1]['Quantidade']} casos)."
+)
+doc.add_paragraph(analise_interrupcoes)
+
+analise_indicadores = (
+    f"Os indicadores coletivos de continuidade (DEC e FEC) do conjunto Iguatemi, que atende a maior parte dos consumidores "
+    f"de {MUNICIPIO}, apresentaram tendência de melhora, com o FEC dentro dos limites regulatórios da ANEEL e o DEC "
+    "apresentando transgressões pontuais em 2023."
+)
+doc.add_paragraph(analise_indicadores)
+
+# === 8. CONCLUSÃO === #
+titulo4 = doc.add_paragraph("DA CONCLUSÃO")
+titulo4.style = "Heading 1"
+conclusao = (
+    f"Com base nas informações analisadas, a AGEMS recomenda a intensificação de ações preventivas de manutenção e poda "
+    f"no município de {MUNICIPIO}, buscando reduzir as interrupções não programadas e melhorar os índices de continuidade."
+)
+doc.add_paragraph(conclusao)
+
+# === 9. SALVAR DOCX E CONVERTER === #
+doc.save(SAIDA_DOCX)
+print(f"✅ Relatório DOCX gerado em: {SAIDA_DOCX}")
+
+try:
+    convert(SAIDA_DOCX, SAIDA_PDF)
+    print(f"✅ Relatório PDF gerado em: {SAIDA_PDF}")
+except Exception as e:
+    print("⚠️ Erro ao converter para PDF:", e)
