@@ -1,0 +1,121 @@
+import requests
+import pandas as pd
+from tqdm import tqdm
+import time
+import os
+
+# === CONFIGURAÇÕES ===
+RESOURCE_ID = "1aa6ad85-05b8-4471-9ca4-316566214ba9"  # exemplo: interrupções 2025
+BASE_URL = "https://dadosabertos.aneel.gov.br/api/3/action/datastore_search"
+LIMIT = 32000  # máximo permitido pela API
+
+# Filtros dinâmicos
+FILTERS = {
+    "SigAgente": "EMS",
+    "NumNivelTensao": [13800, 34500]
+}
+
+# Colunas desejadas na ordem final
+COLUMNS = [
+    "NumAno",
+    "SigAgente",
+    "DscConjuntoUnidadeConsumidora",
+    "DscAlimentadorSubestacao",
+    "DatInicioInterrupcao",
+    "DatFimInterrupcao",
+    "DscSubestacaoDistribuicao",
+    "NumNivelTensao",
+    "DscFatoGeradorInterrupcao",
+    "NumUnidadeConsumidora"
+]
+
+CSV_FILE = "interrupcoes_filtrado_EMS.csv"
+EXCEL_FILE = "interrupcoes_filtrado_EMS.xlsx"
+
+# === FUNÇÃO 1: Baixar e filtrar incrementalmente em CSV ===
+def baixar_filtrar_csv_robusto():
+    offset = 0
+    total_filtrado = 0
+    inicio = time.time()
+
+    if os.path.exists(CSV_FILE):
+        os.remove(CSV_FILE)
+
+    # Primeiro request para saber total da base
+    params = {"resource_id": RESOURCE_ID, "limit": 1, "offset": 0}
+    response = requests.get(BASE_URL, params=params, timeout=120)
+    response.raise_for_status()
+    total_base = response.json()["result"]["total"]
+    print(f"📦 Total de registros na base: {total_base:,}\n")
+
+    with tqdm(total=total_base, desc="Processando registros", unit="reg") as pbar:
+        while True:
+            params = {"resource_id": RESOURCE_ID, "limit": LIMIT, "offset": offset}
+
+            # Tentativa de request
+            success = False
+            for tentativa in range(3):
+                try:
+                    response = requests.get(BASE_URL, params=params, timeout=180)
+                    response.raise_for_status()
+                    records = response.json()["result"]["records"]
+                    success = True
+                    break
+                except Exception as e:
+                    print(f"⚠️ Erro na tentativa {tentativa+1}: {e}")
+                    time.sleep(5)
+
+            if not success or not records:
+                break
+
+            df_chunk = pd.DataFrame(records)
+
+            # Normalizar colunas e valores
+            for col, val in FILTERS.items():
+                if col in df_chunk.columns:
+                    if isinstance(val, list):
+                        # Diferencia strings e números
+                        if all(isinstance(x, str) for x in val):
+                            df_chunk[col] = df_chunk[col].astype(str).str.strip().str.upper()
+                            val_upper = [v.upper() for v in val]
+                            df_chunk = df_chunk[df_chunk[col].isin(val_upper)]
+                        else:
+                            df_chunk[col] = pd.to_numeric(df_chunk[col], errors='coerce')
+                            df_chunk = df_chunk[df_chunk[col].isin(val)]
+                    else:
+                        df_chunk[col] = df_chunk[col].astype(str).str.strip().str.upper()
+                        df_chunk = df_chunk[df_chunk[col] == val.upper()]
+
+            # Selecionar colunas finais (se existirem)
+            df_chunk = df_chunk[[c for c in COLUMNS if c in df_chunk.columns]]
+
+            # Salvar incremental em CSV
+            if not df_chunk.empty:
+                df_chunk.to_csv(CSV_FILE, mode='a', index=False, header=not os.path.exists(CSV_FILE))
+                total_filtrado += len(df_chunk)
+
+            offset += LIMIT
+
+            # Atualiza barra de progresso mostrando total filtrado
+            pbar.update(len(records))
+            pbar.set_postfix({"Filtrados": f"{total_filtrado:,}"})
+
+            if len(records) < LIMIT:
+                break
+
+    tempo_total = (time.time() - inicio) / 60
+    print(f"\n✅ Total filtrado final: {total_filtrado:,} registros.")
+    print(f"🕒 Tempo total de execução CSV: {tempo_total:.1f} minutos.")
+
+# === FUNÇÃO 2: Converter CSV final para Excel ===
+def csv_para_excel():
+    print("\n📄 Convertendo CSV final para Excel...")
+    chunksize = 50000
+    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
+        for i, chunk in enumerate(pd.read_csv(CSV_FILE, chunksize=chunksize)):
+            chunk.to_excel(writer, index=False, header=(i == 0), startrow=i*chunksize)
+    print(f"💾 Arquivo Excel salvo com sucesso: {EXCEL_FILE}")
+
+if __name__ == "__main__":
+    baixar_filtrar_csv_robusto()
+    csv_para_excel()
