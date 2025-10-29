@@ -9,6 +9,9 @@ from datetime import date
 import os
 from docx2pdf import convert
 from lxml.html.defs import list_tags
+import re
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_COLOR_INDEX
 
 # === CONFIGURAÇÕES === #
 MUNICIPIO = "Tacuru"
@@ -34,8 +37,8 @@ run = titulo.runs[0]
 run.font.size = Pt(14)
 run.bold = True
 
-for style in doc.styles:
-    print(style.name)
+# for style in doc.styles:
+    # print(style.name)
 
 # === 2. ASSUNTO === #
 solicitante = "1ª Promotoria de Justiça da Comarca de Iguatemi, Ministério Público de Mato Grosso do Sul"
@@ -44,6 +47,18 @@ data_oficio = "14 de outubro de 2025"
 noticia_fato = "01.2025.00011392-0"
 concessionaria = "Energisa Mato Grosso do Sul – EMS"
 concessionaria2 = "EMS"
+concessionaria3 = "ENERGISA MS"
+conjunto1 = "Iguatemi"
+conjunto2 = "Amambai"
+ano_inicio_analise = "2020"
+mes_inicio_analise = "janeiro"
+ano_final_analise = "2025"
+mes_final_analise = "março"
+nivel_tensao_13_8 = "13,8 kV"
+nivel_tensao_34_5 = "34,5 kV"
+figura = 0
+tabela = 0
+
 
 assunto = (
         f""" \n\n\nAssunto: Atendimento à Demanda da {solicitante}, relativa ao Ofício n° {num_oficio}, que faz referência 
@@ -72,6 +87,21 @@ def add_table_of_contents():
 add_table_of_contents()
 doc.add_page_break()
 
+def destacar_palvras(paragrafo_obj, texto, palavras_destaque, highlight=True, underline=True):
+
+    pattern = re.compile("(" + "|".join(re.escape(w) for w in palavras_destaque) + ")")
+    partes = re.split(pattern, texto)
+
+    for parte in partes:
+        if not parte:
+            continue
+        run = paragrafo_obj.add_run(parte)
+        if parte in palavras_destaque:
+            if highlight:
+                run.font.highlight_color = WD_COLOR_INDEX.YELLOW
+            if underline:
+                run.underline = True
+
 # === 4. DO OBJETIVO === #
 titulo1 = doc.add_paragraph("DO OBJETIVO")
 titulo1.style = "Title"
@@ -81,7 +111,6 @@ objetivo = doc.add_paragraph(
         f" ao Ofício n° {num_oficio}, de {data_oficio}, da {solicitante}, referente à solicitação para que a Agência verifique"
         f" possíveis irregularidades e deficiências no fornecimento de energia elétrica por parte da empresa {concessionaria}," 
         f" no município de {MUNICIPIO}."
-
 )
 objetivo.style = "No Spacing"
 objetivo.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
@@ -89,46 +118,76 @@ objetivo.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 # === 5. DOS FATOS === #
 titulo2 = doc.add_paragraph("DOS FATOS")
 titulo2.style = "Title"
-fatos = doc.add_paragraph(
+
+paragrafos = [
         f" Solicitação da {solicitante} para análise acerca de frequentes quedas de energia elétrica no município de {MUNICIPIO}," 
-        f" visando instruir a Notícia de Fato mencionada, em 'consonância com o Ofício n° 165/2025 da Câmara Municipal de Tacuru'." 
+        f" visando instruir a Notícia de Fato mencionada, em consonância com o Ofício n° 165/2025 da Câmara Municipal de Tacuru'." 
         f" A análise foi elaborada pela Câmara Técnica de Energia e Mineração da AGEMS a partir de informações da ANEEL e da {concessionaria2}."
         f" Nesse contexto, a presente análise foi elaborada pela Câmara Técnica de Energia e Mineração da AGEMS a partir de informações" 
-        f" disponibilizadas pela ANEEL e de dados fornecidos pela EMS em resposta ao Ofício da Agência de n° 4732/2025/DGE," 
-        f" de 16 de outubro de 2025."
-)
-  
-fatos1 = doc.add_paragraph(
+        f" disponibilizadas pela ANEEL e de dados fornecidos pela EMS em resposta ao Ofício da Agência de n° 4732/2025/DGE,"
+        f" de 16 de outubro de 2025.\n",
+
         f" Neste relatório são detalhados os esclarecimentos da EMS, conforme correspondência ENERGISAMS/DTEC-ANEEL/N°058/2025," 
         f" de 21 de outubro de 2025, com análise das seguintes informações:"
-)
+]
+
+for texto in paragrafos:
+    paragrafos = doc.add_paragraph(texto)
+    paragrafos.style = "No Spacing"
+    paragrafos.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
 fatos2 = doc.add_paragraph(
-        f" a.	subestações e alimentadores de distribuição que fornecem energia ao município de Tacuru, com respectivo diagrama unifilar" 
-        f" do sistema elétrico e conjuntos aos quais pertencem os consumidores;"  
-        f" b.	ocorrências com interrupção na rede de energia elétrica que afetaram os consumidores do município, no período de 01/01/2022 a 31/08/2025;"   
-        f" c.	valores das compensações pagas aos consumidores pela extrapolação dos limites de continuidade individuais (DIC, FIC, DMIC e DICRI)," 
-        f" relativos ao período de janeiro/2022 a agosto/2025;"
-        f" d.	manutenções realizadas em 2024 e até agosto de 2025 nas redes de distribuição e equipamentos que atendem o município," 
-        f" e as previsões para o restante do ano e para o ano de 2026;"
-        f" e.	obras de melhoria realizadas em 2024 e até agosto de 2025 no município, que tiveram por objetivo a melhora dos indicadores" 
-        f" de continuidade das unidades consumidoras, como também as previstas para o restante do ano e para o ano de 2026."
+    f"""    a.	subestações e alimentadores de distribuição que fornecem energia ao município de Tacuru, com respectivo diagrama unifilar do sistema elétrico e conjuntos aos quais pertencem os consumidores;
+      b.	ocorrências com interrupção na rede de energia elétrica que afetaram os consumidores do município, no período de 01/01/2022 a 31/08/2025;
+      c.	valores das compensações pagas aos consumidores pela extrapolação dos limites de continuidade individuais (DIC, FIC, DMIC e DICRI), relativos ao período de janeiro/2022 a agosto/2025;
+      d.	manutenções realizadas em 2024 e até agosto de 2025 nas redes de distribuição e equipamentos que atendem o município, e as previsões para o restante do ano e para o ano de 2026;
+      e.	obras de melhoria realizadas em 2024 e até agosto de 2025 no município, que tiveram por objetivo a melhora dos indicadores de continuidade das unidades consumidoras, como também as previstas para o restante do ano e para o ano de 2026.
+"""
 )
 
-fatos.style = "No Spacing"
-fatos1.style = "No Spacing"
-fatos2.style = "No Spacing"
-fatos.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-fatos1.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+fatos2.style = "Heading 7"
 fatos2.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
 # === 6. DA ANÁLISE === #
 titulo3 = doc.add_paragraph("DA ANÁLISE")
 titulo3.style = "Title"
+
+#--- III.1 CONTINUIDADE - DEC E FEC --- #
+
 titulo3_1 = doc.add_paragraph(f"Atendimento de Energia Elétrica ao Município de {MUNICIPIO}")
 titulo3_1.style = "Heading 8"
 
-# === GERA E INSERE GRÁFICO === #
+paragrafos = [
+    f"O indicador DEC, Duração Equivalente de Interrupção por Unidade Consumidora, "
+    f"é o intervalo de tempo que, em média, no período de apuração, em cada unidade consumidora "
+    f"do conjunto considerado, ocorreu descontinuidade da distribuição de energia elétrica.\n",
+
+    f"O indicador FEC, Frequência Equivalente de Interrupção por Unidade Consumidora, "
+    f"compreende o número de interrupções ocorridas, em média, no período de apuração, "
+    f"em cada unidade consumidora do conjunto considerado.\n",
+
+    f"Os valores dos limites anuais dos indicadores de continuidade dos conjuntos de unidades consumidoras serão "
+    f"disponibilizados por meio de audiência pública e estabelecidos em resolução específica, de acordo com a "
+    f"periodicidade da revisão tarifária da distribuidora.\n",
+
+    f"Os valores estabelecidos para o período até a próxima revisão tarifária serão publicados por meio de resolução " 
+    f"específica e entrarão em vigor a partir do mês de janeiro do ano subsequente à publicação, devendo propiciar " 
+    f"melhoria do limite anual global de DEC e FEC da distribuidora.\n",
+    
+    f"Os gráficos apresentados na Figura {figura}, a seguir, visualizam as evoluções dos Indicadores Anuais de "
+    f"Continuidade DEC e FEC dos conjuntos {conjunto1} e {conjunto2} que atendem mais diretamente "
+    f"o município de {MUNICIPIO}, bem como os limites permitidos pela ANEEL, no período de {mes_inicio_analise} "
+    f"de {ano_inicio_analise} até {mes_final_analise} de {ano_final_analise} (anualizado).\n",
+]
+
+figura = figura + 1
+
+for texto in paragrafos:
+    paragrafos = doc.add_paragraph(texto)
+    paragrafos.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    paragrafos.style = 'No Spacing'
+
+# --- GERA E INSERE GRÁFICOS DEC E FEC--- #
 df = pd.DataFrame({
     "Causa": ["Vento", "Descarga Atmosférica", "Falha de Equipamento", "Vegetação"],
     "Quantidade": [1290, 1134, 734, 300]
@@ -143,6 +202,141 @@ plt.savefig(figura1_path)
 plt.close()
 
 doc.add_picture(figura1_path, width=Inches(5.5))
+legenda_figura = doc.add_paragraph(f"Figura {figura} - Evolução dos indicadores de continuidade DEC e FEC dos conjuntos {conjunto1} e {conjunto2},"
+                                   f"que atendem o município de {MUNICIPIO}, no período {ano_inicio_analise} a {ano_final_analise}\n")
+legenda_figura.style = 'Heading 9'
+legenda_figura.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+texto = "Os gráficos apresentados na Figura 1 mostram que:"
+
+paragrafos = [
+f"a. Os limites para os indicadores DEC e FEC dos Conjuntos (em cor vermelha) se apresentam em curva descendente, "
+f"resultante da exigência da ANEEL por melhora contínua da qualidade de serviço. Dessa forma a cada ano que passa a "
+f"distribuidora necessita envidar mais esforços para manter-se dentro dos limites regulados.",
+
+f" b. Dos 2 (dois) conjuntos analisados, as transgressões do indicador anual DEC (em cor azul) do conjunto {conjunto1}" 
+f" foram observadas em todos os anos apurados, mostrando um aumento no ano de 2023 e uma pequena queda no ano de 2024. "
+f"Já o conjunto {conjunto2} mostra ultrapassagem do limite regulado no ano de 2021, melhorando nos anos seguintes "
+f"para valores apurados dentro das metas. Vale destacar que o conjunto de {conjunto1} apresentou maiores números de "
+f"ultrapassagens do limite mostrando a necessidade da {concessionaria} investir na região. Para o Conjunto {conjunto2} "
+f"observa-se no gráfico que há uma busca da distribuidora em se adaptar aos novos limites estabelecidos pela ANEEL.",
+
+f" c. A respeito das transgressões dos indicadores anuais de FEC (em cor verde), no geral há uma busca de distribuidora "
+f" em se adaptar aos novos limites. Somente o conjunto de {conjunto1} apresentou transgressão do valor limite nos "
+f"anos de 2020 e 2021, todavia no restante dos anos apurados o indicador se manteve dentro do valor pactuado.",
+
+f" d. Os expurgos por situação de emergência dos indicadores são representados em cor amarela. Os gráficos mostram cada "
+f"mês a média móvel dos últimos 12 (doze) meses, dessa forma os eventos climáticos adversos refletem nos expurgos dos "
+f"meses seguintes. A tempestade de areia ocorrida em outubro de 2021 impactou os indicadores como pode se perceber nos gráficos."
+]
+
+for texto in paragrafos:
+    paragrafos = doc.add_paragraph(texto)
+    paragrafos.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    paragrafos.style = 'Heading 7'
+
+#--- III.2 COMPENSAÇÃO - DIC, FIC, DMIC E DICRI --- #
+
+paragrafos = [
+    f" Os indicadores individuais de continuidade DIC (Duração de Interrupção Individual por Unidade Consumidora), "
+    f"FIC (Frequência de Interrupção Individual por Unidade Consumidora) e DMIC (Duração Máxima de Interrupção Contínua "
+    f"por Unidade Consumidora) são destacados na fatura de energia elétrica do consumidor. Esses indicadores representam "
+    f"para o consumidor a qualidade dos serviços prestados pela distribuidora e mensuram a frequência e a duração das "
+    f"interrupções ocorridas em sua unidade.\n",
+
+    f" Os limites são definidos no Módulo 8 do PRODIST, para períodos mensais, trimestrais e anuais, com base na variação "
+    f"dos limites anuais dos indicadores de continuidade coletivos (DEC e FEC) dos conjuntos elétricos de consumidores.\n",
+
+    f" Quando esses indicadores individuais de continuidade são transgredidos, ou seja, excedem o limite estabelecido, "
+    f"a distribuidora deve compensar financeiramente o consumidor. A compensação é automática, e deve ser paga em até 2 "
+    f"(dois) meses após o mês de apuração do indicador (mês em que houve a interrupção).\n",
+
+    f" A Figura {figura}, a seguir apresenta os montantes de compensações pagas por violação aos limites dos indicadores "
+    f"individuais aos consumidores do município de {MUNICIPIO} no período de {ano_inicio_analise} até {mes_final_analise} "
+    f"de {ano_final_analise}."
+]
+
+figura = figura + 1
+
+for texto in paragrafos:
+    paragrafos = doc.add_paragraph(texto)
+    paragrafos.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    paragrafos.style = 'No Spacing'
+
+#INSERIR Gráfico de COMPENSAÇÃO#
+
+legenda_figura = doc.add_paragraph(f"Figura {figura} - Montantes de compensações anuais creditados aos consumidores por "
+                                   f"violação dos limites dos indicadores individuais no município {MUNICIPIO},no período "
+                                   f"de {ano_inicio_analise} até {ano_final_analise}\n")
+legenda_figura.style = 'Heading 9'
+legenda_figura.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+paragrafos = [
+    f"Percebe-se que houve um aumento do valor pago nos anos de 2022 e 2023 em relação a 2021. Em 2024, os dados das "
+    f"compensações pagas são referentes ao período de janeiro a maio. Ao comparar com o mesmo período dos anos anteriores "
+    f"de 2022 e 2023, o valor de 2024 demonstra uma tendência de alcançar os mesmos patamares anteriores, indicando que "
+    f"os problemas perduram no município.\n",
+
+    f"O aumento das compensações aos consumidores é resultante de limites mais rigorosos exigidos para a qualidade da "
+    f"distribuição de energia elétrica. A compensação diretamente na fatura do consumidor por transgressão de limites de "
+    f"indicadores é peça regulatória efetiva. É uma obrigação imposta à distribuidora que independe de uma ação "
+    f"fiscalizatória predeterminada. É um sinal regulatório cujo objetivo é fazer com que a concessionária invista na "
+    f"qualidade do serviço.\n"
+]
+
+for texto in paragrafos:
+    paragrafos = doc.add_paragraph(texto)
+    paragrafos.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    paragrafos.style = 'No Spacing'
+
+#--- III.3 MANUTENÇÕES E OBRAS PREVISTAS --- #
+paragrafos = [
+    f"Foi requisitado à concessionária {concessionaria2} informar as manutenções realizadas em {ano_final_analise} no município e as "
+    f"previsões para o ano de 2024, conforme mostrado na Tabela {tabela} a seguir."
+]
+tabela = tabela + 1
+for texto in paragrafos:
+    paragrafos = doc.add_paragraph(texto)
+    paragrafos.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    paragrafos.style = 'No Spacing'
+
+#INSERIR TABELA MANUTENÇÕES#
+
+legenda_tabela = doc.add_paragraph(f"Tabela {tabela} - Dados de valores executados e previstos de {ano_final_analise} dos serviços "
+                                   f"de poda de árvore, manutenção e limpeza por faixa informados pela concessionária, "
+                                   f"referente ao município de {MUNICIPIO}\n")
+legenda_tabela.style = 'Heading 9'
+legenda_tabela.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+paragrafos = [
+     f"Pela tabela fica evidente que há intervenção da concessionária a respeito de podas de árvores, buscando trazer "
+     f"maior eficácia ao sistema de distribuição, sendo já executado 80,2% do previsto para o ano de 2024.\n",
+
+     f"Com relação as manutenções por estrutura e as limpezas de faixa de servidão nas linhas e redes de distribuição, "
+     f"a {concessionaria3} tem programações para {ano_final_analise}, com maior previsão para limpeza de faixa que é mais "
+     f"atinente a linha de distribuição de {nivel_tensao_34_5}.\n",
+    
+     f"Além das manutenções informadas, a {concessionaria} comunicou a realização de obras de substituição de cabos, postes, chaves, "
+     f"transformadores e equipamentos de rede de distribuição nos alimentadores que atendem a região. Porém, atualmente "
+     f"não está previsto nem uma obra estruturante para o ano de {ano_final_analise}.\n",
+    
+     f"A equipe de fiscalização da AGEMS fez uma inspeção in loco no município de {MUNICIPIO}, no dia 26/06/2024, "
+     f"onde constatou a realização das manutenções e melhorias e o estado de conservação das redes de distribuição "
+     f"primária e secundária, não verificando irregularidades significativas. No Anexo deste relatório constam fotos da "
+     f"visita apresentando pequenas irregularidades, relativo somente a necessidade da poda de galhos de árvores próximos "
+     f"as redes, que inclusive devem estar na previsão para o segundo semestre de 2024.\n"
+]
+
+palavras_destaque = ["AGEMS", "2024"]
+
+for texto in paragrafos:
+    p = doc.add_paragraph()          # Parágrafo vazio
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.style = 'No Spacing'
+
+    destacar_palvras(p, texto, palavras_destaque, highlight=True, underline=True)
+
+
 
 # === 7. ANÁLISES === #
 total = df["Quantidade"].sum()
