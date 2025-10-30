@@ -78,16 +78,19 @@ print(f"\nResumo rápido:")
 total_consumidores = df['NumUnidadeConsumidora'].sum()
 print(f"\n👥 Total de consumidores afetados no ano de {df['NumAno'].iloc[0]}: {int(total_consumidores):,}")
 
-# === 6. Causas x Quantidade === #
-df_nao_programadas = df[df['Tipo'].str.upper().str.contains('NAO PROGRAMADA')]
+# === 6. Causas x Quantidade - Interrupções Programadas e Não Programadas === #
+
+# Filtra as interrupções NÃO PROGRAMADAS
+df_nao_programadas = df[df['Tipo'].str.upper() == 'NAO PROGRAMADA']
 causas_nao_programadas = df_nao_programadas['Causa'].value_counts()
 print("\n⚡ Causas de interrupções NÃO PROGRAMADAS:")
 print(causas_nao_programadas.head(10))
 
-df_programadas = df[df['Tipo'].str.upper().str.contains('PROGRAMADA')]
+# Filtra as interrupções PROGRAMADAS
+df_programadas = df[df['Tipo'].str.upper() == 'PROGRAMADA']
 causas_programadas = df_programadas['Causa'].value_counts()
 print("\n🛠️ Principais causas de interrupção PROGRAMADAS:")
-print(causas_programadas.head(10))
+print(causas_programadas.head(2))
 
 # === 7. Causas que mais afetaram consumidores === #
 consumidores_por_causa = df.groupby('Causa')['NumUnidadeConsumidora'].sum().sort_values(ascending=False)
@@ -106,46 +109,50 @@ df['Duracao_categoria'] = pd.cut(df['Duracao_horas'], bins=bins, labels=labels, 
 
 duracao_interrupcoes = df['Duracao_categoria'].value_counts().reindex(labels)
 
-# === 9. Gráficos === #
+# === 9. Gráfico de barras — causas mais frequentes === #
 plt.figure(figsize=(10,6))
 duracao_interrupcoes.plot(kind='bar', color='steelblue')
-plt.title(f'Distribuição das interrupções por duração em {df["NumAno"].iloc[0]}')
-plt.xlabel('Duração da Interrupção')
-plt.ylabel('Quantidade de Ocorrências')
-plt.xticks(rotation=45, ha='right')
+plt.title(f"Distribuição das interrupções por duração em {df['NumAno'].iloc[0]}")
+plt.xlabel("Duração da Interrupção")
+plt.ylabel("Quantidade de Ocorrências")
+plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.show()
 
+# === 10. Gráfico de barras — causas mais frequentes (NÃO PROGRAMADAS) === #
 plt.figure(figsize=(10,5))
-causas_nao_programadas.head(10).plot(kind='bar', color='indianred')
-plt.title(f'Principais causas de interrupções Não Programadas em {df["NumAno"].iloc[0]}')
-plt.ylabel('Ocorrências')
-plt.xlabel('Causas')
-plt.xticks(rotation=45, ha='right')
+causas_nao_programadas.head(10).plot(kind="bar", color="steelblue")
+plt.title(f"Principais causas de interrupções Não Programadas x Ocorrências em {df['NumAno'].iloc[0]}")
+plt.ylabel("Ocorrências")
+plt.xlabel("Causas")
+plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.show()
 
+# === 11. Gráfico de barras — causas mais frequentes (PROGRAMADAS) === #
 plt.figure(figsize=(10,5))
-causas_programadas.head(5).plot(kind='bar', color='steelblue')
-plt.title(f'Interrupções Programadas em {df["NumAno"].iloc[0]}')
+causas_programadas.head(10).plot(kind='bar', color='steelblue')
+plt.title(f"Quantidade de interrupções Programadas em {df['NumAno'].iloc[0]}")
 plt.ylabel('Ocorrências')
 plt.xlabel('Causas')
 plt.xticks(rotation=0, ha='center')
 plt.tight_layout()
 plt.show()
 
+# === 12. Gráfico de barras — consumidores afetados por causa === #
 plt.figure(figsize=(10,5))
 consumidores_por_causa.head(10).plot(kind='bar', color='darkgreen')
-plt.title(f'Causas que mais afetaram consumidores em {df["NumAno"].iloc[0]}')
+plt.title(f"Principais causas que afetaram consumidores em {df['NumAno'].iloc[0]}")
 plt.ylabel('Total de consumidores afetados')
 plt.xlabel('Causas')
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout()
 plt.show()
 
+# === 13. Gráfico de pizza — proporção de consumidores por causa === #
 plt.figure(figsize=(8,8))
 causas_nao_programadas.head(6).plot(kind='pie', autopct='%1.1f%%', startangle=90)
-plt.title(f'Percentual das principais causas nas interrupções Não Programadas ({df["NumAno"].iloc[0]})')
+plt.title(f"Percentual das principais causas nas interrupções Não Programadas em {df['NumAno'].iloc[0]}")
 plt.ylabel('')
 plt.tight_layout()
 plt.show()
