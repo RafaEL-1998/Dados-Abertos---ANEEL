@@ -11,3 +11,7 @@ Diferença em banco de dados:
 
 - Se os separadores das colunas, em .csv, forem em " ; " (ponto e vírgula), utilizar código EMS;
 - Se as colunas interessadas em separação estiverem separadas por " - " (traço/hífen), utilizar código EMS;
+
+DETALHES IMPORTANTES:
+Existem diferenças nos bancos de dados, qualquer diferença nas strings (acentos, espaçamento, caracteres, etc.) podem
+prejudicar os resultados. 
