@@ -1,8 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from pandas.conftest import skipna
-from pandas.core.interchange.dataframe_protocol import Column
 import datetime
 
 # === CONFIGURAÇÕES === #
@@ -10,7 +8,7 @@ pd.set_option('display.max_columns', None)
 plt.style.use('seaborn-v0_8')
 
 # Ajuste o nome do seu arquivo
-arquivo = "interrupcoes_filtrado.csv"
+arquivo = "interrupcoes_filtrado_EMS.csv"
 
 # === 1. Carregar os dados === #
 print("🔍 Carregando base de dados...")
