@@ -12,7 +12,7 @@ arquivo = "interrupcoes_filtrado_EMS.csv"
 
 # === 1. Carregar os dados === #
 print("🔍 Carregando base de dados...")
-df = pd.read_csv(arquivo, sep=';', encoding='latin1', low_memory=False)
+df = pd.read_csv(arquivo, sep=',', encoding='utf-8', low_memory=False)
 base_original = len(df)
 
 # === 2. Filtrar colunas de interesse === #
@@ -45,7 +45,7 @@ df_tratado = (
 )
 
 # salvar o resultado
-df_tratado.to_csv('dados_tratados.csv', sep=';', index=False, encoding='latin1')
+df_tratado.to_csv('dados_tratados.csv', sep=';', index=False, encoding='utf-8')
 df = df_tratado[colunas]
 qtd_repetidos = base_original - len(df_tratado)
 
@@ -69,7 +69,7 @@ df[['Origem', 'Tipo', 'Classe', 'Causa']] = (
 # Remover espaços em branco e normalizar capitalização
 df[['Origem', 'Tipo', 'Classe', 'Causa']] = (
     df[['Origem', 'Tipo', 'Classe', 'Causa']]
-    .apply(lambda x: x.str.strip().str.title())
+    .apply(lambda x: x.str.strip().str.upper())
 )
 
 # Substituir valores inválidos ou vazios
@@ -94,7 +94,8 @@ print(f"\n👥 Total de consumidores afetados no ano de {df['NumAno'].iloc[0]}: 
 # === 6. Causas x Quantidade - Interrupções Programadas e Não Programadas === #
 
 # Filtra as interrupções NÃO PROGRAMADAS
-df_nao_programadas = df[df['Tipo'].str.upper() == 'NÃO PROGRAMADA']
+df_nao_programadas = df[df['Tipo'] == 'NÃO PROGRAMADA']
+
 causas_nao_programadas = df_nao_programadas['Causa'].value_counts()
 print("\n⚡ Causas de interrupções NÃO PROGRAMADAS:")
 print(causas_nao_programadas.head(10))
